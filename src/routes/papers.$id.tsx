@@ -125,24 +125,26 @@ function PaperPage() {
             : "grid-cols-1",
         )}
       >
-        <div className="relative z-20 min-h-0 overflow-hidden bg-paper">
-          <ClientOnly fallback={<ReaderFallback />}>
-            <Suspense fallback={<ReaderFallback />}>
-              <PdfReader
-                paper={paper}
-                topics={topics}
-                highlights={highlights}
-                activeTopicId={activeTopicId}
-                focusedId={focusedId}
-                onFocus={setFocusedId}
-              />
-            </Suspense>
-          </ClientOnly>
+        <div className="relative z-20 min-h-0 bg-paper">
+          <div className="h-full overflow-hidden">
+            <ClientOnly fallback={<ReaderFallback />}>
+              <Suspense fallback={<ReaderFallback />}>
+                <PdfReader
+                  paper={paper}
+                  topics={topics}
+                  highlights={highlights}
+                  activeTopicId={activeTopicId}
+                  focusedId={focusedId}
+                  onFocus={setFocusedId}
+                />
+              </Suspense>
+            </ClientOnly>
+          </div>
           <button
             type="button"
             aria-label={notesOpen ? "Hide notes" : "Show notes"}
             onClick={() => setNotesOpen((o) => !o)}
-            className="absolute right-2 top-1/2 z-30 hidden -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background shadow-sm lg:flex size-7 hover:border-mark-strong/60 hover:text-foreground text-muted-foreground transition-colors"
+            className="absolute right-0 top-1/2 z-30 hidden -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border border-border bg-background shadow-sm lg:flex size-7 hover:border-mark-strong/60 hover:text-foreground text-muted-foreground transition-colors"
           >
             {notesOpen ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
           </button>
