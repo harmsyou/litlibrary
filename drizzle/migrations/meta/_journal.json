@@ -15,6 +15,13 @@
       "when": 1788719273102,
       "tag": "0001_papers_storage_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788720938086,
+      "tag": "0002_paper_analysis_fields",
+      "breakpoints": true
     }
   ]
 }

@@ -107,33 +107,60 @@ export type Database = {
       papers: {
         Row: {
           abstract: string
+          analysis_status: string
+          analyzed_at: string | null
           authors: string
           created_at: string
+          field: string | null
           file_path: string
           id: string
           page_count: number | null
+          position: string | null
+          position_reason: string | null
+          question: string | null
+          standing: string | null
+          standing_reason: string | null
+          summary: string | null
           title: string
           updated_at: string
           year: number | null
         }
         Insert: {
           abstract?: string
+          analysis_status?: string
+          analyzed_at?: string | null
           authors?: string
           created_at?: string
+          field?: string | null
           file_path: string
           id?: string
           page_count?: number | null
+          position?: string | null
+          position_reason?: string | null
+          question?: string | null
+          standing?: string | null
+          standing_reason?: string | null
+          summary?: string | null
           title: string
           updated_at?: string
           year?: number | null
         }
         Update: {
           abstract?: string
+          analysis_status?: string
+          analyzed_at?: string | null
           authors?: string
           created_at?: string
+          field?: string | null
           file_path?: string
           id?: string
           page_count?: number | null
+          position?: string | null
+          position_reason?: string | null
+          question?: string | null
+          standing?: string | null
+          standing_reason?: string | null
+          summary?: string | null
           title?: string
           updated_at?: string
           year?: number | null

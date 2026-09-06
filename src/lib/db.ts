@@ -134,7 +134,27 @@ export async function uploadPaper(file: File, meta: { title: string; authors: st
   ) as Paper;
 }
 
-export async function updatePaper(id: string, patch: Partial<Pick<Paper, "title" | "authors" | "year" | "abstract" | "page_count">>) {
+export async function updatePaper(
+  id: string,
+  patch: Partial<
+    Pick<
+      Paper,
+      | "title"
+      | "authors"
+      | "year"
+      | "abstract"
+      | "page_count"
+      | "field"
+      | "question"
+      | "standing"
+      | "standing_reason"
+      | "position"
+      | "position_reason"
+      | "summary"
+      | "analysis_status"
+    >
+  >,
+) {
   return throwIf(
     await supabase.from("papers").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id).select("*").single(),
   ) as Paper;
