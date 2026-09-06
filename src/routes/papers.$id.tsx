@@ -4,6 +4,7 @@ import { lazy, Suspense, useState } from "react";
 import { ClientOnly } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { z } from "zod";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { PaperNotes } from "@/components/reader/PaperNotes";
 import { PaperMetaDialog } from "@/components/reader/PaperMetaDialog";
@@ -20,6 +21,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { deletePaper, paperHighlightsQuery, paperNotesQuery, paperQuery, topicsQuery } from "@/lib/db";
+import { cn } from "@/lib/utils";
 
 const PdfReader = lazy(() => import("@/components/reader/PdfReader"));
 
@@ -73,6 +75,7 @@ function PaperPage() {
   const navigate = useNavigate();
   const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(h ?? null);
+  const [notesOpen, setNotesOpen] = useState(true);
 
   const remove = useMutation({
     mutationFn: () => deletePaper(paper!),
@@ -114,8 +117,15 @@ function PaperPage() {
           </>
         }
       />
-      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_440px]">
-        <div className="min-h-0 overflow-hidden bg-paper">
+      <div
+        className={cn(
+          "grid min-h-0 flex-1 transition-[grid-template-columns] duration-300 ease-out",
+          notesOpen
+            ? "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_440px]"
+            : "grid-cols-1",
+        )}
+      >
+        <div className="relative min-h-0 overflow-hidden bg-paper">
           <ClientOnly fallback={<ReaderFallback />}>
             <Suspense fallback={<ReaderFallback />}>
               <PdfReader
@@ -128,8 +138,21 @@ function PaperPage() {
               />
             </Suspense>
           </ClientOnly>
+          <button
+            type="button"
+            aria-label={notesOpen ? "Hide notes" : "Show notes"}
+            onClick={() => setNotesOpen((o) => !o)}
+            className="absolute right-0 top-1/2 z-30 hidden -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border border-border bg-background shadow-sm lg:flex size-7 hover:border-mark-strong/60 hover:text-foreground text-muted-foreground transition-colors"
+          >
+            {notesOpen ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
+          </button>
         </div>
-        <aside className="min-h-0 overflow-hidden border-t border-border lg:border-l lg:border-t-0">
+        <aside
+          className={cn(
+            "min-h-0 overflow-hidden border-t border-border lg:border-l lg:border-t-0",
+            !notesOpen && "hidden",
+          )}
+        >
           <PaperNotes paper={paper} topics={topics} activeTopicId={activeTopicId} onTopicChange={setActiveTopicId} />
         </aside>
       </div>
