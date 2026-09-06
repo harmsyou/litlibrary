@@ -54,10 +54,67 @@ function Index() {
   }, [links]);
 
   const topicById = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics]);
+  const paperById = useMemo(() => new Map(papers.map((p) => [p.id, p])), [papers]);
   const needle = q.trim().toLowerCase();
-  const filteredTopics = topics.filter((t) => !needle || t.name.toLowerCase().includes(needle));
+  const has = (s: string | null | undefined) => !!needle && !!s && s.toLowerCase().includes(needle);
+
+  // Matches inside comments and notes
+  const matches = useMemo(() => {
+    if (!needle) return [];
+    const out: {
+      key: string;
+      kind: "comment" | "paper note" | "synthesis";
+      text: string;
+      context: string;
+      paperId?: string;
+      highlightId?: string;
+      topicSlug?: string;
+      paperIdForFilter?: string;
+      topicIdForFilter?: string;
+    }[] = [];
+    for (const h of links.highlights) {
+      if (has(h.quote) || has(h.comment_md)) {
+        const p = paperById.get(h.paper_id);
+        out.push({
+          key: "h" + h.id,
+          kind: "comment",
+          text: has(h.comment_md) ? h.comment_md : h.quote,
+          context: `${p?.title ?? "Paper"} · p. ${h.page}${h.topic_id ? ` · # ${topicById.get(h.topic_id)?.name ?? ""}` : ""}`,
+          paperId: h.paper_id,
+          highlightId: h.id,
+          paperIdForFilter: h.paper_id,
+          topicIdForFilter: h.topic_id ?? undefined,
+        });
+      }
+    }
+    for (const n of links.notes) {
+      if (has(n.content_md)) {
+        const p = paperById.get(n.paper_id);
+        out.push({
+          key: "n" + n.id,
+          kind: "paper note",
+          text: n.content_md,
+          context: `${p?.title ?? "Paper"} · # ${topicById.get(n.topic_id)?.name ?? ""}`,
+          paperId: n.paper_id,
+          paperIdForFilter: n.paper_id,
+          topicIdForFilter: n.topic_id,
+        });
+      }
+    }
+    for (const t of topics) {
+      if (has(t.synthesis_md)) {
+        out.push({ key: "t" + t.id, kind: "synthesis", text: t.synthesis_md, context: `# ${t.name}`, topicSlug: t.slug, topicIdForFilter: t.id });
+      }
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needle, links, topics, paperById, topicById]);
+
+  const matchedPaperIds = new Set(matches.map((m) => m.paperIdForFilter).filter(Boolean));
+  const matchedTopicIds = new Set(matches.map((m) => m.topicIdForFilter).filter(Boolean));
+  const filteredTopics = topics.filter((t) => !needle || has(t.name) || matchedTopicIds.has(t.id));
   const filteredPapers = papers.filter(
-    (p) => !needle || p.title.toLowerCase().includes(needle) || p.authors.toLowerCase().includes(needle),
+    (p) => !needle || has(p.title) || has(p.authors) || has(p.abstract) || matchedPaperIds.has(p.id),
   );
 
   return (
@@ -70,25 +127,60 @@ function Index() {
           </>
         }
       />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-5 pb-24 pt-14">
-        <div className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="label-mono mb-3">Personal research library</p>
-            <h1 className="max-w-2xl text-4xl font-semibold leading-[1.05] tracking-tight md:text-5xl">
-              Reading Room
-            </h1>
-            <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
-              Papers on the left, notes on the right. Every highlight you route to a topic collects here, in one
-              place, alongside your own synthesis.
-            </p>
-          </div>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-5 pb-24 pt-10">
+        <h1 className="sr-only">Reading Room</h1>
+        <div className="mb-10">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search topics and papers"
-            className="h-9 w-full border-b border-border bg-transparent text-sm outline-none placeholder:text-muted-foreground/70 focus:border-foreground md:w-72"
+            placeholder="Search topics, papers, comments and notes"
+            className="h-10 w-full border-b border-border bg-transparent text-[15px] outline-none placeholder:text-muted-foreground/70 focus:border-foreground md:w-96"
           />
         </div>
+
+        {needle && (
+          <section className="mb-14">
+            <div className="flex items-baseline justify-between border-b border-foreground pb-2">
+              <h2 className="text-sm font-semibold">In comments &amp; notes</h2>
+              <span className="label-mono">{matches.length}</span>
+            </div>
+            {matches.length === 0 ? (
+              <p className="pt-4 text-sm text-muted-foreground">No comments or notes mention “{q.trim()}”.</p>
+            ) : (
+              <ul>
+                {matches.slice(0, 30).map((m) => {
+                  const inner = (
+                    <>
+                      <p className="label-mono mb-1 normal-case tracking-normal">
+                        {m.kind} · {m.context}
+                      </p>
+                      <p className="text-[15px] leading-relaxed">{snippet(m.text, needle)}</p>
+                    </>
+                  );
+                  const cls = "block py-3.5 transition-colors hover:bg-accent/60";
+                  return (
+                    <li key={m.key} className="border-b border-border">
+                      {m.topicSlug ? (
+                        <Link to="/topics/$slug" params={{ slug: m.topicSlug }} className={cls}>
+                          {inner}
+                        </Link>
+                      ) : (
+                        <Link
+                          to="/papers/$id"
+                          params={{ id: m.paperId! }}
+                          search={m.highlightId ? { h: m.highlightId } : {}}
+                          className={cls}
+                        >
+                          {inner}
+                        </Link>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        )}
 
         <div className="grid gap-16 md:grid-cols-[2fr_3fr]">
           {/* Topics */}
