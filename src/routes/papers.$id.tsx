@@ -149,7 +149,7 @@ function PaperPage() {
         </div>
         <aside
           className={cn(
-            "min-h-0 overflow-hidden border-t border-border lg:border-l lg:border-t-0",
+            "relative z-10 min-h-0 overflow-hidden border-t border-border bg-background lg:border-l lg:border-t-0",
             !notesOpen && "hidden",
           )}
         >
