@@ -127,7 +127,7 @@ export const analyzePaper = createServerFn({ method: "POST" })
         analyzed_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         ...(data.overwriteIdentity
-          ? { title: r.title || data.hint?.title, authors: r.authors, year: r.year ?? data.hint?.year ?? null }
+          ? { title: r.title || data.hint?.title || "Untitled", authors: r.authors, year: r.year ?? data.hint?.year ?? null }
           : {}),
       };
       const { error } = await supabaseAdmin.from("papers").update(patch).eq("id", data.paperId);
