@@ -126,7 +126,7 @@ export default function PdfReader({ paper, topics, highlights, activeTopicId, fo
       | null;
     const pageEl = startEl?.closest<HTMLElement>("[data-page-number]");
     if (!pageEl || !pagesRef.current) return;
-    const page = Number(pageEl.dataset.pageNumber);
+    const page = Number(pageEl.dataset['pageNumber']);
     const pr = pageEl.getBoundingClientRect();
     const rects: HighlightRect[] = [];
     for (const r of Array.from(range.getClientRects())) {
@@ -147,7 +147,7 @@ export default function PdfReader({ paper, topics, highlights, activeTopicId, fo
     const quote = sel.toString().replace(/\s+/g, " ").trim();
     if (!quote) return;
     const base = pagesRef.current.getBoundingClientRect().top;
-    setPending({ page, rects, quote, anchorTop: pr.top - base + rects[0].y * pr.height });
+    setPending({ page, rects, quote, anchorTop: pr.top - base + (rects[0]?.y ?? 0) * pr.height });
     onFocus(null);
   };
 
