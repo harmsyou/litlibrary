@@ -41,17 +41,17 @@ export const papersQuery = () =>
       ) as Paper[],
   });
 
-/** Lightweight index of every highlight + note link, for counts on the home page. */
+/** Index of every highlight + note, for counts and search on the home page. */
 export const linksQuery = () =>
   queryOptions({
     queryKey: ["links"],
     queryFn: async () => {
       const [h, n] = await Promise.all([
-        supabase.from("highlights").select("id, paper_id, topic_id"),
+        supabase.from("highlights").select("id, paper_id, topic_id, page, quote, comment_md"),
         supabase.from("paper_topic_notes").select("id, paper_id, topic_id, content_md"),
       ]);
       return {
-        highlights: throwIf(h) as Pick<Highlight, "id" | "paper_id" | "topic_id">[],
+        highlights: throwIf(h) as Pick<Highlight, "id" | "paper_id" | "topic_id" | "page" | "quote" | "comment_md">[],
         notes: (throwIf(n) as Pick<PaperTopicNote, "id" | "paper_id" | "topic_id" | "content_md">[]).filter(
           (x) => x.content_md.trim().length > 0,
         ),
