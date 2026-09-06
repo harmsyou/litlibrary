@@ -21,7 +21,8 @@ export function PaperNotes({
 
   // Default to first topic that already has notes for this paper, else first topic
   useEffect(() => {
-    if (activeTopicId && topics.some((t) => t.id === activeTopicId)) return;
+    // Only pick a default when nothing is chosen; never silently switch away from a chosen topic
+    if (activeTopicId) return;
     const withNotes = notes.find((n) => n.content_md.trim());
     const first = withNotes?.topic_id ?? topics[0]?.id ?? null;
     if (first !== activeTopicId) onTopicChange(first);
@@ -74,6 +75,7 @@ export function PaperNotes({
             await upsertPaperNote(paper.id, active.id, v);
             qc.invalidateQueries({ queryKey: ["paper", paper.id, "notes"] });
             qc.invalidateQueries({ queryKey: ["links"] });
+            qc.invalidateQueries({ queryKey: ["topic"] });
           }}
         />
       ) : (

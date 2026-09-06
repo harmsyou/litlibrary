@@ -74,7 +74,16 @@ export const topicBySlugQuery = (slug: string) =>
           .eq("topic_id", topic.id)
           .order("created_at"),
       ) as (Highlight & { papers: Pick<Paper, "id" | "title" | "authors" | "year"> | null })[];
-      return { topic, highlights };
+      const notes = (
+        throwIf(
+          await supabase
+            .from("paper_topic_notes")
+            .select("*, papers(id, title, authors, year)")
+            .eq("topic_id", topic.id)
+            .order("updated_at", { ascending: false }),
+        ) as (PaperTopicNote & { papers: Pick<Paper, "id" | "title" | "authors" | "year"> | null })[]
+      ).filter((n) => n.content_md.trim().length > 0);
+      return { topic, highlights, notes };
     },
   });
 
