@@ -14,7 +14,159 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      highlights: {
+        Row: {
+          color: string
+          comment_md: string
+          created_at: string
+          id: string
+          page: number
+          paper_id: string
+          quote: string
+          rects: Json
+          topic_id: string | null
+        }
+        Insert: {
+          color?: string
+          comment_md?: string
+          created_at?: string
+          id?: string
+          page: number
+          paper_id: string
+          quote?: string
+          rects?: Json
+          topic_id?: string | null
+        }
+        Update: {
+          color?: string
+          comment_md?: string
+          created_at?: string
+          id?: string
+          page?: number
+          paper_id?: string
+          quote?: string
+          rects?: Json
+          topic_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "highlights_paper_id_fkey"
+            columns: ["paper_id"]
+            isOneToOne: false
+            referencedRelation: "papers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "highlights_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      paper_topic_notes: {
+        Row: {
+          content_md: string
+          id: string
+          paper_id: string
+          topic_id: string
+          updated_at: string
+        }
+        Insert: {
+          content_md?: string
+          id?: string
+          paper_id: string
+          topic_id: string
+          updated_at?: string
+        }
+        Update: {
+          content_md?: string
+          id?: string
+          paper_id?: string
+          topic_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paper_topic_notes_paper_id_fkey"
+            columns: ["paper_id"]
+            isOneToOne: false
+            referencedRelation: "papers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "paper_topic_notes_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      papers: {
+        Row: {
+          abstract: string
+          authors: string
+          created_at: string
+          file_path: string
+          id: string
+          page_count: number | null
+          title: string
+          updated_at: string
+          year: number | null
+        }
+        Insert: {
+          abstract?: string
+          authors?: string
+          created_at?: string
+          file_path: string
+          id?: string
+          page_count?: number | null
+          title: string
+          updated_at?: string
+          year?: number | null
+        }
+        Update: {
+          abstract?: string
+          authors?: string
+          created_at?: string
+          file_path?: string
+          id?: string
+          page_count?: number | null
+          title?: string
+          updated_at?: string
+          year?: number | null
+        }
+        Relationships: []
+      }
+      topics: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          synthesis_md: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+          synthesis_md?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+          synthesis_md?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

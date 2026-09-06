@@ -1,5 +1,13 @@
 {
   "version": "7",
   "dialect": "postgresql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1788719253970,
+      "tag": "0000_create_research_schema",
+      "breakpoints": true
+    }
+  ]
 }
