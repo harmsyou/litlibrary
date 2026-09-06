@@ -245,3 +245,15 @@
 .react-pdf__Page__textContent span::selection {
   background: var(--color-mark);
 }
+
+/* Notes editor */
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: color-mix(in oklch, var(--color-muted-foreground) 60%, transparent);
+}
+.tiptap > :first-child {
+  margin-top: 0;
+}
