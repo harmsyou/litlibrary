@@ -69,8 +69,8 @@ function Index() {
       paperId?: string;
       highlightId?: string;
       topicSlug?: string;
-      paperIdForFilter?: string;
-      topicIdForFilter?: string;
+      paperIdForFilter?: string | undefined;
+      topicIdForFilter?: string | undefined;
     }[] = [];
     for (const h of links.highlights) {
       if (has(h.quote) || has(h.comment_md)) {
