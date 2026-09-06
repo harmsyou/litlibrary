@@ -125,7 +125,7 @@ function PaperPage() {
             : "grid-cols-1",
         )}
       >
-        <div className="relative z-10 min-h-0 overflow-hidden bg-paper">
+        <div className="relative z-20 min-h-0 overflow-hidden bg-paper">
           <ClientOnly fallback={<ReaderFallback />}>
             <Suspense fallback={<ReaderFallback />}>
               <PdfReader
