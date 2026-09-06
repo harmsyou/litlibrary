@@ -61,8 +61,9 @@ function TopicPage() {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
 
-  if (!data) return null;
-  const { topic, highlights } = data;
+  // Loader throws notFound() when missing, so data is always present here.
+  const { topic, highlights } = data!;
+
 
   const rename = useMutation({
     mutationFn: (n: string) => updateTopic(topic.id, { name: n }),
