@@ -46,7 +46,9 @@ export default function PdfReader({ paper, topics, highlights, activeTopicId, fo
   const pagesRef = useRef<HTMLDivElement>(null);
   const pageEls = useRef(new Map<number, HTMLDivElement>());
   const [numPages, setNumPages] = useState(0);
-  const [pageWidth, setPageWidth] = useState(600);
+  const [fitWidth, setFitWidth] = useState(600);
+  const [zoom, setZoom] = useState(1);
+  const pageWidth = Math.round(fitWidth * zoom);
   const [layout, setLayout] = useState<Record<number, { top: number; height: number }>>({});
   const [pending, setPending] = useState<PendingSelection | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
@@ -63,7 +65,7 @@ export default function PdfReader({ paper, topics, highlights, activeTopicId, fo
     if (!el) return;
     const ro = new ResizeObserver(() => {
       const w = el.clientWidth - MARGIN_W - GAP * 3;
-      setPageWidth(Math.max(320, Math.min(860, w)));
+      setFitWidth(Math.max(320, Math.min(860, w)));
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -210,6 +212,37 @@ export default function PdfReader({ paper, topics, highlights, activeTopicId, fo
         onFocus(null);
       }}
     >
+      <div
+        data-popover
+        className="sticky top-3 z-20 float-right mr-3 flex items-center gap-0.5 rounded-lg border border-border bg-background/95 px-1 py-0.5 backdrop-blur"
+      >
+        <button
+          type="button"
+          aria-label="Zoom out"
+          disabled={zoom <= 0.6}
+          onClick={() => setZoom((z) => Math.max(0.6, +(z - 0.1).toFixed(2)))}
+          className="flex size-7 items-center justify-center rounded-md text-base text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
+        >
+          −
+        </button>
+        <button
+          type="button"
+          aria-label="Reset zoom"
+          onClick={() => setZoom(1)}
+          className="label-mono min-w-11 text-center hover:text-foreground"
+        >
+          {Math.round(zoom * 100)}%
+        </button>
+        <button
+          type="button"
+          aria-label="Zoom in"
+          disabled={zoom >= 2}
+          onClick={() => setZoom((z) => Math.min(2, +(z + 0.1).toFixed(2)))}
+          className="flex size-7 items-center justify-center rounded-md text-base text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
+        >
+          +
+        </button>
+      </div>
       <div ref={pagesRef} className="relative mx-auto" style={{ width: pageWidth + MARGIN_W + GAP, padding: `${GAP}px 0` }}>
         <div style={{ width: pageWidth }} onMouseUp={onMouseUp}>
           {url && (
