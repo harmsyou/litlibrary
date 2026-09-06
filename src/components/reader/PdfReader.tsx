@@ -373,7 +373,7 @@ function NewCommentBox({
   return (
     <div
       data-popover
-      className="absolute left-0 right-0 border border-foreground bg-popover p-3 shadow-[4px_4px_0_0_var(--color-mark)]"
+      className="absolute left-0 right-0 rounded-xl border border-mark-strong/50 bg-popover p-3.5 shadow-[0_2px_12px_rgba(0,0,0,0.10)]"
       style={{ top }}
       onMouseDown={(e) => e.stopPropagation()}
     >
@@ -454,19 +454,19 @@ function Callout({
       onMouseLeave={() => onHover(null)}
       onClick={onFocus}
       className={cn(
-        "absolute left-0 right-0 cursor-pointer border bg-popover p-3 text-sm transition-[transform,box-shadow,border-color] duration-200",
+        "absolute left-0 right-0 cursor-pointer rounded-xl border bg-popover p-3.5 text-sm transition-[transform,box-shadow,border-color] duration-200",
         focused
-          ? "z-10 -translate-x-2 border-foreground shadow-[4px_4px_0_0_var(--color-mark)]"
+          ? "z-10 -translate-x-3 border-mark-strong/60 shadow-[0_4px_16px_rgba(0,0,0,0.12)]"
           : hovered
-            ? "border-foreground/50"
-            : "border-border",
+            ? "-translate-x-1 border-border shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
+            : "border-border/70 shadow-[0_1px_3px_rgba(0,0,0,0.05)]",
       )}
       style={{ top }}
     >
       {/* connector */}
       <span
         className={cn(
-          "absolute -left-6 top-3 h-px w-6 bg-mark-strong transition-opacity",
+          "absolute -left-6 top-4 h-px w-6 bg-mark-strong transition-opacity",
           focused || hovered ? "opacity-100" : "opacity-0",
         )}
       />

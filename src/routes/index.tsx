@@ -268,3 +268,21 @@ function Index() {
     </div>
   );
 }
+
+/** Short excerpt around the first match, with the match emphasised. */
+function snippet(text: string, needle: string) {
+  const flat = text.replace(/\s+/g, " ").trim();
+  const i = flat.toLowerCase().indexOf(needle);
+  if (i < 0) return flat.slice(0, 160);
+  const start = Math.max(0, i - 60);
+  const end = Math.min(flat.length, i + needle.length + 100);
+  return (
+    <>
+      {start > 0 && "…"}
+      {flat.slice(start, i)}
+      <mark className="bg-mark px-0.5">{flat.slice(i, i + needle.length)}</mark>
+      {flat.slice(i + needle.length, end)}
+      {end < flat.length && "…"}
+    </>
+  );
+}
