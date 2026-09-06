@@ -4,57 +4,53 @@ import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { uploadPaper } from "@/lib/db";
 import { useAnalyzePaper } from "@/lib/useAnalyzePaper";
 import { cn } from "@/lib/utils";
 
 export function UploadPaperDialog() {
   const [open, setOpen] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-  const [title, setTitle] = useState("");
-  const [authors, setAuthors] = useState("");
-  const [year, setYear] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
   const [drag, setDrag] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
   const navigate = useNavigate();
   const analyze = useAnalyzePaper();
 
+  const m = useMutation({
+    mutationFn: (file: File) =>
+      uploadPaper(file, {
+        // Placeholder until the AI analysis reads the real title from the PDF.
+        title: file.name.replace(/\.pdf$/i, "").replace(/[_-]+/g, " "),
+        authors: null,
+        year: null,
+      }),
+    onSuccess: (p, file) => {
+      qc.invalidateQueries({ queryKey: ["papers"] });
+      // Fill in title, authors, year and the profile from the PDF itself.
+      void analyze(p, { file, overwriteIdentity: true });
+      setOpen(false);
+      setBusy(null);
+      navigate({ to: "/papers/$id", params: { id: p.id } });
+    },
+    onError: (e) => {
+      setBusy(null);
+      toast.error(e.message);
+    },
+  });
+
   const pick = (f: File | undefined) => {
-    if (!f) return;
+    if (!f || m.isPending) return;
     if (f.type !== "application/pdf" && !f.name.toLowerCase().endsWith(".pdf")) {
       toast.error("Please choose a PDF file.");
       return;
     }
-    setFile(f);
-    if (!title) setTitle(f.name.replace(/\.pdf$/i, "").replace(/[_-]+/g, " "));
+    setBusy(f.name);
+    m.mutate(f);
   };
 
-  const m = useMutation({
-    mutationFn: () =>
-      uploadPaper(file!, {
-        title: title.trim(),
-        authors: authors.trim(),
-        year: year ? Number(year) : null,
-      }),
-    onSuccess: (p) => {
-      qc.invalidateQueries({ queryKey: ["papers"] });
-      // Fill the library card in the background; don't block opening the reader.
-      void analyze(p, { file: file!, overwriteIdentity: true });
-      setOpen(false);
-      setFile(null);
-      setTitle("");
-      setAuthors("");
-      setYear("");
-      navigate({ to: "/papers/$id", params: { id: p.id } });
-    },
-    onError: (e) => toast.error(e.message),
-  });
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => !m.isPending && setOpen(v)}>
       <DialogTrigger asChild>
         <Button size="sm">Upload paper</Button>
       </DialogTrigger>
@@ -62,67 +58,46 @@ export function UploadPaperDialog() {
         <DialogHeader>
           <DialogTitle>Upload a paper</DialogTitle>
         </DialogHeader>
-        <form
-          onSubmit={(e) => {
+        <div
+          onDragOver={(e) => {
             e.preventDefault();
-            if (file && title.trim()) m.mutate();
+            setDrag(true);
           }}
-          className="space-y-4"
+          onDragLeave={() => setDrag(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDrag(false);
+            pick(e.dataTransfer.files[0]);
+          }}
+          onClick={() => inputRef.current?.click()}
+          className={cn(
+            "flex h-32 cursor-pointer flex-col items-center justify-center border border-dashed border-border text-sm text-muted-foreground transition-colors hover:border-foreground",
+            drag && "border-foreground bg-accent",
+            m.isPending && "pointer-events-none opacity-60",
+          )}
         >
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDrag(true);
+          {busy ? (
+            <>
+              <span className="font-medium text-foreground">{busy}</span>
+              <span className="label-mono mt-1">Uploading & reading…</span>
+            </>
+          ) : (
+            <>
+              <span>Drop a PDF here or click to choose</span>
+              <span className="label-mono mt-1">Title, authors and year are read from the PDF</span>
+            </>
+          )}
+          <input
+            ref={inputRef}
+            type="file"
+            accept="application/pdf,.pdf"
+            className="hidden"
+            onChange={(e) => {
+              pick(e.target.files?.[0]);
+              e.target.value = "";
             }}
-            onDragLeave={() => setDrag(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDrag(false);
-              pick(e.dataTransfer.files[0]);
-            }}
-            onClick={() => inputRef.current?.click()}
-            className={cn(
-              "flex h-28 cursor-pointer flex-col items-center justify-center border border-dashed border-border text-sm text-muted-foreground transition-colors hover:border-foreground",
-              drag && "border-foreground bg-accent",
-            )}
-          >
-            {file ? (
-              <>
-                <span className="font-medium text-foreground">{file.name}</span>
-                <span className="label-mono mt-1">{(file.size / 1024 / 1024).toFixed(1)} MB</span>
-              </>
-            ) : (
-              <>
-                <span>Drop a PDF here or click to choose</span>
-                <span className="label-mono mt-1">Up to 50 MB</span>
-              </>
-            )}
-            <input
-              ref={inputRef}
-              type="file"
-              accept="application/pdf,.pdf"
-              className="hidden"
-              onChange={(e) => pick(e.target.files?.[0])}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="title">Title</Label>
-            <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
-          </div>
-          <div className="grid grid-cols-[1fr_88px] gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="authors">Authors</Label>
-              <Input id="authors" value={authors} onChange={(e) => setAuthors(e.target.value)} placeholder="Optional" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="year">Year</Label>
-              <Input id="year" inputMode="numeric" value={year} onChange={(e) => setYear(e.target.value.replace(/\D/g, "").slice(0, 4))} />
-            </div>
-          </div>
-          <Button type="submit" className="w-full" disabled={!file || !title.trim() || m.isPending}>
-            {m.isPending ? "Uploading…" : "Add to library"}
-          </Button>
-        </form>
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );
