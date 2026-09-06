@@ -124,13 +124,13 @@ export async function deleteTopic(id: string) {
   throwIf(await supabase.from("topics").delete().eq("id", id));
 }
 
-export async function uploadPaper(file: File, meta: { title: string; authors: string; year: number | null }) {
+export async function uploadPaper(file: File, meta: { title: string; authors: string | null; year: number | null }) {
   const id = crypto.randomUUID();
   const path = `${id}.pdf`;
   const up = await supabase.storage.from("papers").upload(path, file, { contentType: "application/pdf" });
   if (up.error) throw new Error(up.error.message);
   return throwIf(
-    await supabase.from("papers").insert({ id, file_path: path, ...meta }).select("*").single(),
+    await supabase.from("papers").insert({ id, file_path: path, ...meta, authors: meta.authors ?? "" }).select("*").single(),
   ) as Paper;
 }
 
