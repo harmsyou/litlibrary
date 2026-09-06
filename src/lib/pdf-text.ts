@@ -2,9 +2,7 @@
 export async function extractPdfText(file: Blob, opts: { firstPages?: number; lastPages?: number; maxChars?: number } = {}) {
   const { firstPages = 6, lastPages = 2, maxChars = 12000 } = opts;
   const { pdfjs } = await import("react-pdf");
-  if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-    pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
-  }
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
   const data = new Uint8Array(await file.arrayBuffer());
   const doc = await pdfjs.getDocument({ data }).promise;
   const n = doc.numPages;
