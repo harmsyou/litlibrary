@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { NewTopicDialog } from "@/components/NewTopicDialog";
 import { UploadPaperDialog } from "@/components/UploadPaperDialog";
+import { PaperTable } from "@/components/PaperTable";
 import { linksQuery, papersQuery, topicsQuery } from "@/lib/db";
 
 export const Route = createFileRoute("/")({
@@ -114,8 +115,25 @@ function Index() {
   const matchedTopicIds = new Set(matches.map((m) => m.topicIdForFilter).filter(Boolean));
   const filteredTopics = topics.filter((t) => !needle || has(t.name) || matchedTopicIds.has(t.id));
   const filteredPapers = papers.filter(
-    (p) => !needle || has(p.title) || has(p.authors) || has(p.abstract) || matchedPaperIds.has(p.id),
+    (p) =>
+      !needle ||
+      has(p.title) ||
+      has(p.authors) ||
+      has(p.abstract) ||
+      has(p.field) ||
+      has(p.question) ||
+      has(p.standing) ||
+      has(p.position) ||
+      has(p.summary) ||
+      matchedPaperIds.has(p.id),
   );
+  const topicsByPaper = useMemo(() => {
+    const m = new Map<string, typeof topics>();
+    for (const [pid, ids] of stats.paperTopics) {
+      m.set(pid, [...ids].map((id) => topicById.get(id)).filter((t): t is (typeof topics)[number] => !!t));
+    }
+    return m;
+  }, [stats, topicById]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -127,7 +145,7 @@ function Index() {
           </>
         }
       />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-5 pb-24 pt-10">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-5 pb-24 pt-10">
         <h1 className="sr-only">Reading Room</h1>
         <p className="mb-8 text-[11px] uppercase tracking-[0.14em] text-muted-foreground label-mono">
           Personal Research Library
@@ -185,7 +203,7 @@ function Index() {
           </section>
         )}
 
-        <div className="grid gap-16 md:grid-cols-[2fr_3fr]">
+        <div className="grid gap-16 lg:grid-cols-[minmax(220px,1fr)_minmax(0,2.6fr)]">
           {/* Topics */}
           <section>
             <div className="flex items-baseline justify-between border-b border-foreground pb-2">
@@ -219,7 +237,7 @@ function Index() {
           </section>
 
           {/* Papers */}
-          <section>
+          <section className="min-w-0">
             <div className="flex items-baseline justify-between border-b border-foreground pb-2">
               <h2 className="text-sm font-semibold">Papers</h2>
               <span className="label-mono">{filteredPapers.length}</span>
@@ -227,43 +245,7 @@ function Index() {
             {filteredPapers.length === 0 ? (
               <p className="pt-6 text-sm text-muted-foreground">No papers yet. Upload a PDF to start reading.</p>
             ) : (
-              <ul>
-                {filteredPapers.map((p) => {
-                  const ts = [...(stats.paperTopics.get(p.id) ?? [])]
-                    .map((id) => topicById.get(id))
-                    .filter(Boolean);
-                  return (
-                    <li key={p.id} className="border-b border-border">
-                      <Link
-                        to="/papers/$id"
-                        params={{ id: p.id }}
-                        className="group grid gap-1 py-4 transition-colors hover:bg-accent/60 md:grid-cols-[1fr_auto] md:gap-6"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-[15px] font-medium leading-snug group-hover:underline group-hover:underline-offset-4">
-                            {p.title}
-                          </p>
-                          <p className="mt-1 truncate text-sm text-muted-foreground">
-                            {[p.authors, p.year].filter(Boolean).join(" · ") || "No author info"}
-                          </p>
-                          {ts.length > 0 && (
-                            <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-                              {ts.map((t) => (
-                                <span key={t!.id} className="label-mono normal-case tracking-normal">
-                                  # {t!.name}
-                                </span>
-                              ))}
-                            </p>
-                          )}
-                        </div>
-                        <span className="label-mono self-start pt-1">
-                          {new Date(p.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
+              <PaperTable papers={filteredPapers} topicsByPaper={topicsByPaper} />
             )}
           </section>
         </div>

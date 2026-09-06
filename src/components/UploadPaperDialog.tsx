@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { uploadPaper } from "@/lib/db";
+import { useAnalyzePaper } from "@/lib/useAnalyzePaper";
 import { cn } from "@/lib/utils";
 
 export function UploadPaperDialog() {
@@ -19,6 +20,7 @@ export function UploadPaperDialog() {
   const inputRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const analyze = useAnalyzePaper();
 
   const pick = (f: File | undefined) => {
     if (!f) return;
@@ -39,6 +41,8 @@ export function UploadPaperDialog() {
       }),
     onSuccess: (p) => {
       qc.invalidateQueries({ queryKey: ["papers"] });
+      // Fill the library card in the background; don't block opening the reader.
+      void analyze(p, { file: file!, overwriteIdentity: true });
       setOpen(false);
       setFile(null);
       setTitle("");
