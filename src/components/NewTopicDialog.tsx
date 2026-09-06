@@ -23,8 +23,9 @@ export function NewTopicDialog({
 
   const m = useMutation({
     mutationFn: createTopic,
-    onSuccess: (t) => {
-      qc.invalidateQueries({ queryKey: ["topics"] });
+    onSuccess: async (t) => {
+      // Wait for the topic list to refresh so the new topic can become active immediately
+      await qc.invalidateQueries({ queryKey: ["topics"] });
       setOpen(false);
       setName("");
       onCreated?.(t);
