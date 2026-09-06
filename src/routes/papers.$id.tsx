@@ -144,7 +144,10 @@ function PaperPage() {
             type="button"
             aria-label={notesOpen ? "Hide notes" : "Show notes"}
             onClick={() => setNotesOpen((o) => !o)}
-            className="absolute right-0 top-1/2 z-[100] hidden -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border border-mark-strong/40 bg-background shadow-md lg:flex size-8 hover:border-mark-strong hover:text-foreground text-muted-foreground transition-colors"
+            className={cn(
+              "absolute top-1/2 z-[100] hidden -translate-y-1/2 items-center justify-center rounded-full border border-mark-strong/40 bg-background shadow-md lg:flex size-8 hover:border-mark-strong hover:text-foreground text-muted-foreground transition-colors",
+              notesOpen ? "right-0 translate-x-1/2" : "right-3 translate-x-0",
+            )}
           >
             {notesOpen ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
           </button>
