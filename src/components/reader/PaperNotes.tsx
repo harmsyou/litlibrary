@@ -74,6 +74,7 @@ export function PaperNotes({
             await upsertPaperNote(paper.id, active.id, v);
             qc.invalidateQueries({ queryKey: ["paper", paper.id, "notes"] });
             qc.invalidateQueries({ queryKey: ["links"] });
+            qc.invalidateQueries({ queryKey: ["topic"] });
           }}
         />
       ) : (
