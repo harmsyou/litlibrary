@@ -62,7 +62,7 @@ function TopicPage() {
   const [name, setName] = useState("");
 
   // Loader throws notFound() when missing, so data is always present here.
-  const { topic, highlights } = data!;
+  const { topic, highlights, notes } = data!;
 
 
   const rename = useMutation({
@@ -90,6 +90,8 @@ function TopicPage() {
     g.items.push(h);
     byPaper.set(h.papers.id, g);
   }
+
+  const paperCount = new Set([...byPaper.keys(), ...notes.map((n) => n.paper_id)]).size;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -140,11 +142,38 @@ function TopicPage() {
           <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight md:text-5xl">{topic.name}</h1>
         )}
         <p className="mt-3 text-sm text-muted-foreground">
-          {byPaper.size} {byPaper.size === 1 ? "paper" : "papers"} · {highlights.length}{" "}
-          {highlights.length === 1 ? "quote" : "quotes"}
+          {paperCount} {paperCount === 1 ? "paper" : "papers"} · {notes.length}{" "}
+          {notes.length === 1 ? "note" : "notes"} · {highlights.length} {highlights.length === 1 ? "quote" : "quotes"}
         </p>
 
         <section className="mt-14">
+          <h2 className="mb-6 border-b border-foreground pb-2 text-sm font-semibold">Notes from papers</h2>
+          {notes.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No paper notes yet. While reading a paper, pick this topic in the notes panel and write — it shows up here.
+            </p>
+          ) : (
+            <div className="space-y-12">
+              {notes.map((n) => (
+                <article key={n.id}>
+                  {n.papers && (
+                    <Link to="/papers/$id" params={{ id: n.papers.id }} className="group block">
+                      <p className="text-[15px] font-medium leading-snug group-hover:underline group-hover:underline-offset-4">
+                        {n.papers.title}
+                      </p>
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        {[n.papers.authors, n.papers.year].filter(Boolean).join(" · ")}
+                      </p>
+                    </Link>
+                  )}
+                  <Markdown className="mt-4">{n.content_md}</Markdown>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="mt-16">
           <h2 className="mb-3 border-b border-foreground pb-2 text-sm font-semibold">Synthesis</h2>
           <MarkdownEditor
             resetKey={topic.id}
