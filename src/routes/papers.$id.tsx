@@ -4,6 +4,7 @@ import { lazy, Suspense, useState } from "react";
 import { ClientOnly } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { z } from "zod";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { PaperNotes } from "@/components/reader/PaperNotes";
 import { PaperMetaDialog } from "@/components/reader/PaperMetaDialog";
@@ -20,6 +21,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { deletePaper, paperHighlightsQuery, paperNotesQuery, paperQuery, topicsQuery } from "@/lib/db";
+import { cn } from "@/lib/utils";
 
 const PdfReader = lazy(() => import("@/components/reader/PdfReader"));
 
