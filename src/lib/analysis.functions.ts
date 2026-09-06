@@ -6,6 +6,8 @@ const Input = z.object({
   paperId: z.string().uuid(),
   text: z.string().min(1).max(20000),
   hint: z.object({ title: z.string(), authors: z.string(), year: z.number().nullable() }).optional(),
+  /** Fresh upload: let the AI overwrite title/authors/year with what the PDF says. */
+  overwriteIdentity: z.boolean().default(false),
 });
 
 const Result = z.object({
@@ -124,10 +126,9 @@ export const analyzePaper = createServerFn({ method: "POST" })
         analysis_status: "done",
         analyzed_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        // Only fill identity fields when the reader left them blank/generic.
-        ...(data.hint && data.hint.authors.trim() ? {} : { authors: r.authors }),
-        ...(data.hint && data.hint.year ? {} : { year: r.year }),
-        ...(data.hint && data.hint.title.trim() && !/\.pdf$/i.test(data.hint.title) ? {} : { title: r.title }),
+        ...(data.overwriteIdentity
+          ? { title: r.title || data.hint?.title, authors: r.authors, year: r.year ?? data.hint?.year ?? null }
+          : {}),
       };
       const { error } = await supabaseAdmin.from("papers").update(patch).eq("id", data.paperId);
       if (error) throw new Error(error.message);
