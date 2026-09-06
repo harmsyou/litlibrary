@@ -112,11 +112,11 @@ export function MarkdownEditor({ value, onSave, placeholder, className, resetKey
     onClick,
     className: c,
   }: {
-    on?: boolean;
+    on?: boolean | undefined;
     label: string;
     title: string;
     onClick: () => void;
-    className?: string;
+    className?: string | undefined;
   }) => (
     <button
       type="button"
