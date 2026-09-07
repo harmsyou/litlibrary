@@ -639,7 +639,7 @@ function Callout({
   const ref = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(h.comment_md);
-  const expanded = focused || hovered;
+  const expanded = focused;
 
   useLayoutEffect(() => {
     if (ref.current) onMeasure(ref.current.offsetHeight);
