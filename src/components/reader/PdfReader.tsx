@@ -640,16 +640,18 @@ function Callout({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(h.comment_md);
   const expanded = focused;
+  // Hovering shows more without re-flowing the column: the card floats over its neighbours
+  const peek = hovered && !focused;
 
   useLayoutEffect(() => {
-    if (ref.current) onMeasure(ref.current.offsetHeight);
+    if (ref.current && !peek) onMeasure(ref.current.offsetHeight);
   });
 
   useEffect(() => {
     if (!focused) setEditing(false);
   }, [focused]);
 
-  const preview = firstLine(h.comment_md) ?? `“${h.quote}”`;
+  const preview = firstLine(h.comment_md);
 
   return (
     <div
@@ -659,25 +661,31 @@ function Callout({
       onMouseLeave={() => onHover(null)}
       onClick={onFocus}
       className={cn(
-        "absolute left-0 right-0 cursor-pointer rounded-xl border bg-popover p-3.5 text-sm transition-[transform,box-shadow,border-color] duration-200",
+        "absolute left-0 right-0 cursor-pointer rounded-xl border bg-popover p-3.5 text-sm transition-[box-shadow,border-color] duration-150",
         focused
-          ? "z-20 -translate-x-3 border-mark-strong/60 shadow-[0_4px_16px_rgba(0,0,0,0.12)]"
-          : hovered
-            ? "z-10 -translate-x-1 border-border shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
+          ? "z-20 border-mark-strong/60 shadow-[0_4px_16px_rgba(0,0,0,0.12)]"
+          : peek
+            ? "z-10 border-border shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
             : "z-0 border-border/70 shadow-[0_1px_3px_rgba(0,0,0,0.05)]",
       )}
       style={{ top }}
     >
-      <Connector offset={offset} height={ref.current?.offsetHeight ?? DEFAULT_H} visible={expanded || Math.abs(offset) > 4} />
+      <Connector offset={offset} height={ref.current?.offsetHeight ?? DEFAULT_H} visible={focused || peek || Math.abs(offset) > 4} />
       <div className={cn("flex items-center justify-between gap-2", expanded && "mb-1.5")}>
         <span className="label-mono truncate normal-case tracking-normal">{topicName ? `# ${topicName}` : "No topic"}</span>
         <span className="label-mono shrink-0">p. {h.page}</span>
       </div>
 
-      {!expanded && <p className="line-clamp-1 text-xs leading-relaxed text-muted-foreground">{preview}</p>}
+      {!expanded &&
+        (preview ? (
+          <p className={cn("text-xs leading-relaxed text-muted-foreground", peek ? "line-clamp-6" : "line-clamp-2")}>{preview}</p>
+        ) : (
+          <p className="text-xs italic leading-relaxed text-muted-foreground/70">No comment</p>
+        ))}
 
       {expanded && (
         <p className="mb-2 border-l-2 border-mark-strong pl-2 text-xs leading-relaxed text-muted-foreground">{h.quote}</p>
+
       )}
 
       {expanded &&
