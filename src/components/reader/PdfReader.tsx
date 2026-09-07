@@ -212,7 +212,7 @@ export default function PdfReader({ paper, topics, highlights, activeTopicId, fo
     }
   }, []);
 
-  const expandedId = focusedId ?? hovered;
+  const expandedId = focusedId; // hover must never re-flow the column
   const priorityId = pending ? PENDING : expandedId;
 
   // Build units (single cards, clusters, and the pending box) in anchor order
