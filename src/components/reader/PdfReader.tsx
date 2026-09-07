@@ -602,11 +602,13 @@ function NewCommentBox({
 }
 
 function firstLine(md: string) {
-  return md
+  const text = md
     .replace(/[#>*_`]/g, "")
     .split("\n")
     .map((l) => l.trim())
-    .find(Boolean);
+    .filter(Boolean)
+    .join(" · ");
+  return text || undefined;
 }
 
 function Callout({
