@@ -23,6 +23,12 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.m
 const MARGIN_W = 264; // comment column width
 const GAP = 24;
 const NONE = "__none__";
+const PENDING = "__pending__";
+const CARD_GAP = 8;
+const DEFAULT_H = 64;
+const CLUSTER_H = 40;
+const CLUSTER_RANGE = 24; // px: anchors closer than this belong to the same cluster
+const CLUSTER_MIN = 3;
 
 type Props = {
   paper: Paper;
@@ -40,6 +46,30 @@ type PendingSelection = {
   anchorTop: number; // px within pages container
 };
 
+type Unit =
+  | { kind: "item"; id: string; anchor: number; h: Highlight }
+  | { kind: "cluster"; id: string; anchor: number; items: { h: Highlight; anchor: number }[] }
+  | { kind: "pending"; id: string; anchor: number };
+
+/** Two-directional stacking: the priority card sits at its anchor, others are pushed away from it. */
+function layoutCallouts(units: Unit[], heights: Map<string, number>, priorityId: string | null) {
+  const h = (u: Unit) => heights.get(u.id) ?? (u.kind === "cluster" ? CLUSTER_H : DEFAULT_H);
+  const tops = units.map((u) => u.anchor);
+  if (!units.length) return tops;
+  let p = units.findIndex((u) => u.id === priorityId);
+  if (p < 0) p = 0;
+  tops[p] = units[p]!.anchor;
+  for (let i = p + 1; i < units.length; i++) {
+    tops[i] = Math.max(units[i]!.anchor, tops[i - 1]! + h(units[i - 1]!) + CARD_GAP);
+  }
+  for (let i = p - 1; i >= 0; i--) {
+    tops[i] = Math.min(units[i]!.anchor, tops[i + 1]! - h(units[i]!) - CARD_GAP);
+  }
+  const min = Math.min(...tops);
+  if (min < 0) for (let i = 0; i < tops.length; i++) tops[i] = tops[i]! - min;
+  return tops;
+}
+
 export default function PdfReader({ paper, topics, highlights, activeTopicId, focusedId, onFocus }: Props) {
   const qc = useQueryClient();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -52,6 +82,7 @@ export default function PdfReader({ paper, topics, highlights, activeTopicId, fo
   const [layout, setLayout] = useState<Record<number, { top: number; height: number }>>({});
   const [pending, setPending] = useState<PendingSelection | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
+  const [openCluster, setOpenCluster] = useState<string | null>(null);
 
   const { data: url, error: urlError } = useQuery({
     queryKey: ["paper", paper.id, "url", paper.file_path],
@@ -172,10 +203,20 @@ export default function PdfReader({ paper, topics, highlights, activeTopicId, fo
     return m;
   }, [highlights]);
 
-  // Callout positions with collision pass
-  const calloutHeights = useRef(new Map<string, number>());
+  const cardHeights = useRef(new Map<string, number>());
   const [, force] = useState(0);
-  const callouts = useMemo(() => {
+  const onMeasure = useCallback((id: string, h: number) => {
+    if (cardHeights.current.get(id) !== h) {
+      cardHeights.current.set(id, h);
+      force((x) => x + 1);
+    }
+  }, []);
+
+  const expandedId = focusedId ?? hovered;
+  const priorityId = pending ? PENDING : expandedId;
+
+  // Build units (single cards, clusters, and the pending box) in anchor order
+  const units = useMemo<Unit[]>(() => {
     const items = highlights
       .map((h) => {
         const l = layout[h.page];
@@ -185,16 +226,47 @@ export default function PdfReader({ paper, topics, highlights, activeTopicId, fo
       })
       .filter(Boolean) as { h: Highlight; anchor: number }[];
     items.sort((a, b) => a.anchor - b.anchor);
-    let cursor = 0;
-    const out: { h: Highlight; anchor: number; top: number }[] = [];
+
+    const groups: { h: Highlight; anchor: number }[][] = [];
     for (const it of items) {
-      const top = Math.max(it.anchor, cursor);
-      out.push({ ...it, top });
-      cursor = top + (calloutHeights.current.get(it.h.id) ?? 72) + 8;
+      const g = groups[groups.length - 1];
+      if (g && Math.abs(it.anchor - g[0]!.anchor) < CLUSTER_RANGE) g.push(it);
+      else groups.push([it]);
     }
-    // Focused/expanded callout is allowed to sit at its anchor; push neighbours instead
+
+    const out: Unit[] = [];
+    for (const g of groups) {
+      const clusterId = "cluster-" + g[0]!.h.id;
+      const active = openCluster === clusterId || g.some((x) => x.h.id === expandedId);
+      if (g.length >= CLUSTER_MIN && !active) {
+        out.push({ kind: "cluster", id: clusterId, anchor: g[0]!.anchor, items: g });
+      } else {
+        for (const x of g) out.push({ kind: "item", id: x.h.id, anchor: x.anchor, h: x.h });
+      }
+    }
+    if (pending) out.push({ kind: "pending", id: PENDING, anchor: pending.anchorTop });
+    out.sort((a, b) => a.anchor - b.anchor);
     return out;
-  }, [highlights, layout]);
+  }, [highlights, layout, expandedId, openCluster, pending]);
+
+  const tops = useMemo(() => layoutCallouts(units, cardHeights.current, priorityId), [units, priorityId, cardHeights.current.size, force]);
+
+  // Keep the box you're writing in on screen
+  const pendingKey = pending ? `${pending.page}:${pending.anchorTop}` : null;
+  const scrolledPending = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pendingKey || scrolledPending.current === pendingKey) return;
+    const i = units.findIndex((u) => u.kind === "pending");
+    const el = scrollRef.current;
+    if (i < 0 || !el) return;
+    const top = tops[i] ?? 0;
+    const visTop = el.scrollTop;
+    const visBottom = visTop + el.clientHeight;
+    if (top < visTop + 60 || top + 220 > visBottom) {
+      el.scrollTo({ top: Math.max(0, top - 120), behavior: "smooth" });
+    }
+    scrolledPending.current = pendingKey;
+  }, [pendingKey, units, tops]);
 
   const topicName = (id: string | null) => topics.find((t) => t.id === id)?.name ?? null;
 
@@ -210,6 +282,7 @@ export default function PdfReader({ paper, topics, highlights, activeTopicId, fo
         // click on empty space clears focus
         if ((e.target as HTMLElement).closest("[data-callout],[data-highlight],[data-popover]")) return;
         onFocus(null);
+        setOpenCluster(null);
       }}
     >
       <div
@@ -311,50 +384,90 @@ export default function PdfReader({ paper, topics, highlights, activeTopicId, fo
 
         {/* Margin column */}
         <div className="absolute top-0" style={{ left: pageWidth + GAP, width: MARGIN_W, height: "100%" }}>
-          {pending && (
-            <NewCommentBox
-              top={pending.anchorTop}
-              quote={pending.quote}
-              topics={topics}
-              defaultTopicId={activeTopicId}
-              busy={create.isPending}
-              onCancel={() => setPending(null)}
-              onSave={(comment, topicId) =>
-                create.mutate({
-                  paper_id: paper.id,
-                  topic_id: topicId,
-                  page: pending.page,
-                  rects: pending.rects,
-                  quote: pending.quote,
-                  comment_md: comment,
-                })
-              }
-            />
-          )}
-          {callouts.map(({ h, top }) => (
-            <Callout
-              key={h.id}
-              highlight={h}
-              top={top}
-              topics={topics}
-              topicName={topicName(h.topic_id)}
-              focused={focusedId === h.id}
-              hovered={hovered === h.id}
-              onHover={setHovered}
-              onFocus={() => onFocus(h.id)}
-              onMeasure={(hgt) => {
-                if (calloutHeights.current.get(h.id) !== hgt) {
-                  calloutHeights.current.set(h.id, hgt);
-                  force((x) => x + 1);
-                }
-              }}
-              onSave={(patch) => update.mutate({ id: h.id, patch })}
-              onDelete={() => remove.mutate(h.id)}
-            />
-          ))}
+          {units.map((u, i) => {
+            const top = tops[i] ?? u.anchor;
+            const offset = u.anchor - top;
+            if (u.kind === "pending") {
+              if (!pending) return null;
+              return (
+                <NewCommentBox
+                  key={u.id}
+                  top={top}
+                  offset={offset}
+                  quote={pending.quote}
+                  topics={topics}
+                  defaultTopicId={activeTopicId}
+                  busy={create.isPending}
+                  onMeasure={(hgt) => onMeasure(PENDING, hgt)}
+                  onCancel={() => setPending(null)}
+                  onSave={(comment, topicId) =>
+                    create.mutate({
+                      paper_id: paper.id,
+                      topic_id: topicId,
+                      page: pending.page,
+                      rects: pending.rects,
+                      quote: pending.quote,
+                      comment_md: comment,
+                    })
+                  }
+                />
+              );
+            }
+            if (u.kind === "cluster") {
+              return (
+                <ClusterMarker
+                  key={u.id}
+                  top={top}
+                  count={u.items.length}
+                  page={u.items[0]!.h.page}
+                  onMeasure={(hgt) => onMeasure(u.id, hgt)}
+                  onOpen={() => {
+                    setOpenCluster(u.id);
+                    onFocus(u.items[0]!.h.id);
+                  }}
+                />
+              );
+            }
+            const h = u.h;
+            return (
+              <Callout
+                key={h.id}
+                highlight={h}
+                top={top}
+                offset={offset}
+                topics={topics}
+                topicName={topicName(h.topic_id)}
+                focused={focusedId === h.id}
+                hovered={hovered === h.id}
+                onHover={setHovered}
+                onFocus={() => onFocus(h.id)}
+                onMeasure={(hgt) => onMeasure(h.id, hgt)}
+                onSave={(patch) => update.mutate({ id: h.id, patch })}
+                onDelete={() => remove.mutate(h.id)}
+              />
+            );
+          })}
         </div>
       </div>
     </div>
+  );
+}
+
+/** Line from the highlight anchor to the card, drawn even when the card is displaced. */
+function Connector({ offset, height, visible }: { offset: number; height: number; visible: boolean }) {
+  const y = Math.min(Math.max(offset, 6), Math.max(height - 6, 6));
+  const from = Math.min(y, 16);
+  const to = Math.max(y, 16);
+  return (
+    <span
+      aria-hidden
+      className={cn("pointer-events-none absolute transition-opacity", visible ? "opacity-100" : "opacity-0")}
+      style={{ left: -GAP, top: 0, width: GAP }}
+    >
+      <span className="absolute h-px bg-mark-strong" style={{ top: y, left: 0, width: GAP / 2 }} />
+      <span className="absolute w-px bg-mark-strong" style={{ left: GAP / 2, top: from, height: Math.max(1, to - from) }} />
+      <span className="absolute h-px bg-mark-strong" style={{ top: 16, left: GAP / 2, width: GAP / 2 }} />
+    </span>
   );
 }
 
@@ -384,32 +497,78 @@ function TopicPicker({
   );
 }
 
+function ClusterMarker({
+  top,
+  count,
+  page,
+  onMeasure,
+  onOpen,
+}: {
+  top: number;
+  count: number;
+  page: number;
+  onMeasure: (h: number) => void;
+  onOpen: () => void;
+}) {
+  const ref = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    if (ref.current) onMeasure(ref.current.offsetHeight);
+  });
+  return (
+    <button
+      ref={ref}
+      type="button"
+      data-callout
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpen();
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+      className="absolute left-0 right-0 z-0 flex items-center justify-between rounded-xl border border-border/70 bg-popover px-3 py-2 text-left shadow-[0_1px_3px_rgba(0,0,0,0.05)] transition-colors hover:border-border"
+      style={{ top }}
+    >
+      <span className="label-mono normal-case tracking-normal">{count} comments here</span>
+      <span className="label-mono shrink-0">p. {page}</span>
+    </button>
+  );
+}
+
 function NewCommentBox({
   top,
+  offset,
   quote,
   topics,
   defaultTopicId,
   busy,
   onSave,
   onCancel,
+  onMeasure,
 }: {
   top: number;
+  offset: number;
   quote: string;
   topics: Topic[];
   defaultTopicId: string | null;
   busy: boolean;
   onSave: (comment: string, topicId: string | null) => void;
   onCancel: () => void;
+  onMeasure: (h: number) => void;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
   const [comment, setComment] = useState("");
   const [topicId, setTopicId] = useState<string | null>(defaultTopicId);
+  useLayoutEffect(() => {
+    if (ref.current) onMeasure(ref.current.offsetHeight);
+  });
   return (
     <div
+      ref={ref}
       data-popover
-      className="absolute left-0 right-0 rounded-xl border border-mark-strong/50 bg-popover p-3.5 shadow-[0_2px_12px_rgba(0,0,0,0.10)]"
+      className="absolute left-0 right-0 z-30 rounded-xl border border-mark-strong/50 bg-popover p-3.5 shadow-[0_4px_16px_rgba(0,0,0,0.12)]"
       style={{ top }}
       onMouseDown={(e) => e.stopPropagation()}
     >
+      <Connector offset={offset} height={ref.current?.offsetHeight ?? 160} visible />
       <p className="label-mono mb-2">New comment</p>
       <p className="mb-2 line-clamp-3 border-l-2 border-mark-strong pl-2 text-xs leading-relaxed text-muted-foreground">{quote}</p>
       <textarea
@@ -442,9 +601,18 @@ function NewCommentBox({
   );
 }
 
+function firstLine(md: string) {
+  return md
+    .replace(/[#>*_`]/g, "")
+    .split("\n")
+    .map((l) => l.trim())
+    .find(Boolean);
+}
+
 function Callout({
   highlight: h,
   top,
+  offset,
   topics,
   topicName,
   focused,
@@ -457,6 +625,7 @@ function Callout({
 }: {
   highlight: Highlight;
   top: number;
+  offset: number;
   topics: Topic[];
   topicName: string | null;
   focused: boolean;
@@ -470,6 +639,7 @@ function Callout({
   const ref = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(h.comment_md);
+  const expanded = focused || hovered;
 
   useLayoutEffect(() => {
     if (ref.current) onMeasure(ref.current.offsetHeight);
@@ -478,6 +648,8 @@ function Callout({
   useEffect(() => {
     if (!focused) setEditing(false);
   }, [focused]);
+
+  const preview = firstLine(h.comment_md) ?? `“${h.quote}”`;
 
   return (
     <div
@@ -489,59 +661,56 @@ function Callout({
       className={cn(
         "absolute left-0 right-0 cursor-pointer rounded-xl border bg-popover p-3.5 text-sm transition-[transform,box-shadow,border-color] duration-200",
         focused
-          ? "z-10 -translate-x-3 border-mark-strong/60 shadow-[0_4px_16px_rgba(0,0,0,0.12)]"
+          ? "z-20 -translate-x-3 border-mark-strong/60 shadow-[0_4px_16px_rgba(0,0,0,0.12)]"
           : hovered
-            ? "-translate-x-1 border-border shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
-            : "border-border/70 shadow-[0_1px_3px_rgba(0,0,0,0.05)]",
+            ? "z-10 -translate-x-1 border-border shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
+            : "z-0 border-border/70 shadow-[0_1px_3px_rgba(0,0,0,0.05)]",
       )}
       style={{ top }}
     >
-      {/* connector */}
-      <span
-        className={cn(
-          "absolute -left-6 top-4 h-px w-6 bg-mark-strong transition-opacity",
-          focused || hovered ? "opacity-100" : "opacity-0",
-        )}
-      />
-      <div className="mb-1.5 flex items-center justify-between gap-2">
+      <Connector offset={offset} height={ref.current?.offsetHeight ?? DEFAULT_H} visible={expanded || Math.abs(offset) > 4} />
+      <div className={cn("flex items-center justify-between gap-2", expanded && "mb-1.5")}>
         <span className="label-mono truncate normal-case tracking-normal">{topicName ? `# ${topicName}` : "No topic"}</span>
         <span className="label-mono shrink-0">p. {h.page}</span>
       </div>
-      {!focused && (
-        <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">“{h.quote}”</p>
-      )}
-      {focused && (
+
+      {!expanded && <p className="line-clamp-1 text-xs leading-relaxed text-muted-foreground">{preview}</p>}
+
+      {expanded && (
         <p className="mb-2 border-l-2 border-mark-strong pl-2 text-xs leading-relaxed text-muted-foreground">{h.quote}</p>
       )}
-      {editing ? (
-        <div onMouseDown={(e) => e.stopPropagation()}>
-          <textarea
-            autoFocus
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                onSave({ comment_md: draft });
-                setEditing(false);
-              }
-            }}
-            rows={3}
-            className="w-full resize-none bg-transparent text-sm leading-relaxed outline-none"
-          />
-          <div className="flex justify-end gap-1">
-            <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setEditing(false); setDraft(h.comment_md); }}>
-              Cancel
-            </Button>
-            <Button size="sm" onClick={(e) => { e.stopPropagation(); onSave({ comment_md: draft }); setEditing(false); }}>
-              Save
-            </Button>
+
+      {expanded &&
+        (editing ? (
+          <div onMouseDown={(e) => e.stopPropagation()}>
+            <textarea
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                  onSave({ comment_md: draft });
+                  setEditing(false);
+                }
+              }}
+              rows={3}
+              className="w-full resize-none bg-transparent text-sm leading-relaxed outline-none"
+            />
+            <div className="flex justify-end gap-1">
+              <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setEditing(false); setDraft(h.comment_md); }}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={(e) => { e.stopPropagation(); onSave({ comment_md: draft }); setEditing(false); }}>
+                Save
+              </Button>
+            </div>
           </div>
-        </div>
-      ) : h.comment_md.trim() ? (
-        <Markdown className={cn("mt-1 text-sm", !focused && "line-clamp-3")}>{h.comment_md}</Markdown>
-      ) : (
-        <p className="mt-1 text-xs italic text-muted-foreground">No comment</p>
-      )}
+        ) : h.comment_md.trim() ? (
+          <Markdown className={cn("mt-1 text-sm", !focused && "line-clamp-4")}>{h.comment_md}</Markdown>
+        ) : (
+          <p className="mt-1 text-xs italic text-muted-foreground">No comment</p>
+        ))}
+
       {focused && !editing && (
         <div className="mt-3 space-y-2 border-t border-border pt-2" onMouseDown={(e) => e.stopPropagation()}>
           <TopicPicker topics={topics} value={h.topic_id} onChange={(v) => onSave({ topic_id: v })} />
