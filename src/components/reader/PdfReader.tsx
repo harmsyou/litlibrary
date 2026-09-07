@@ -387,7 +387,8 @@ export default function PdfReader({ paper, topics, highlights, activeTopicId, fo
           {units.map((u, i) => {
             const top = tops[i] ?? u.anchor;
             const offset = u.anchor - top;
-            if (u.kind === "pending" && pending) {
+            if (u.kind === "pending") {
+              if (!pending) return null;
               return (
                 <NewCommentBox
                   key={u.id}
