@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 import { FIELDS, POSITIONS, STANDINGS, STANDING_DEFS, POSITION_DEFS } from "@/lib/paper-analysis";
 
 const Input = z.object({
@@ -105,13 +107,26 @@ async function callGateway(apiKey: string, text: string, hint: z.infer<typeof In
 
 /** Reads a paper's extracted text, asks Lovable AI for the library card, and saves it. */
 export const analyzePaper = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => Input.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("AI is not configured");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    await supabaseAdmin.from("papers").update({ analysis_status: "running" }).eq("id", data.paperId);
+
+    // Only ever touch a paper that belongs to the caller.
+    const { data: paper } = await context.supabase
+      .from("papers")
+      .select("id")
+      .eq("id", data.paperId)
+      .maybeSingle();
+    if (!paper) throw new Error("Paper not found");
+
+    const scoped = (patch: TablesUpdate<"papers">) =>
+      supabaseAdmin.from("papers").update(patch).eq("id", data.paperId).eq("user_id", context.userId);
+
+    await scoped({ analysis_status: "running" });
 
     try {
       const r = await callGateway(apiKey, data.text, data.hint);
@@ -130,13 +145,14 @@ export const analyzePaper = createServerFn({ method: "POST" })
           ? { title: r.title || data.hint?.title || "Untitled", authors: r.authors, year: r.year ?? data.hint?.year ?? null }
           : {}),
       };
-      const { error } = await supabaseAdmin.from("papers").update(patch).eq("id", data.paperId);
+      const { error } = await scoped(patch);
       if (error) throw new Error(error.message);
       return { ok: true as const, result: r };
     } catch (e) {
-      await supabaseAdmin.from("papers").update({ analysis_status: "failed" }).eq("id", data.paperId);
+      await scoped({ analysis_status: "failed" });
       const err = e as Error & { status?: number };
       console.error("analyzePaper failed", err.message);
       return { ok: false as const, error: err.message, status: err.status ?? null };
     }
   });
+

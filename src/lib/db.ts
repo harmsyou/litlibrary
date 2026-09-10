@@ -23,6 +23,13 @@ function throwIf<T>(res: { data: T | null; error: { message: string } | null }):
   return res.data as T;
 }
 
+/** The signed-in account every new row is stamped with. */
+export async function currentUserId(): Promise<string> {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) throw new Error("You need to be signed in.");
+  return data.user.id;
+}
+
 // ---------- Queries ----------
 
 export const topicsQuery = () =>
@@ -113,6 +120,7 @@ export const paperNotesQuery = (paperId: string) =>
 // ---------- Mutations ----------
 
 export async function createTopic(name: string) {
+  const user_id = await currentUserId();
   const base = slugify(name);
   let slug = base;
   for (let i = 2; i < 50; i++) {
@@ -120,7 +128,9 @@ export async function createTopic(name: string) {
     if (!existing) break;
     slug = `${base}-${i}`;
   }
-  return throwIf(await supabase.from("topics").insert({ name: name.trim(), slug }).select("*").single()) as Topic;
+  return throwIf(
+    await supabase.from("topics").insert({ name: name.trim(), slug, user_id }).select("*").single(),
+  ) as Topic;
 }
 
 export async function updateTopic(id: string, patch: Partial<Pick<Topic, "name" | "synthesis_md">>) {
@@ -134,14 +144,20 @@ export async function deleteTopic(id: string) {
 }
 
 export async function uploadPaper(file: File, meta: { title: string; authors: string | null; year: number | null }) {
+  const user_id = await currentUserId();
   const id = crypto.randomUUID();
-  const path = `${id}.pdf`;
+  const path = `${user_id}/${id}.pdf`;
   const up = await supabase.storage.from("papers").upload(path, file, { contentType: "application/pdf" });
   if (up.error) throw new Error(up.error.message);
   return throwIf(
-    await supabase.from("papers").insert({ id, file_path: path, ...meta, authors: meta.authors ?? "" }).select("*").single(),
+    await supabase
+      .from("papers")
+      .insert({ id, file_path: path, user_id, ...meta, authors: meta.authors ?? "" })
+      .select("*")
+      .single(),
   ) as Paper;
 }
+
 
 export async function updatePaper(
   id: string,
@@ -181,11 +197,12 @@ export async function getPaperUrl(path: string) {
 }
 
 export async function upsertPaperNote(paperId: string, topicId: string, content: string) {
+  const user_id = await currentUserId();
   return throwIf(
     await supabase
       .from("paper_topic_notes")
       .upsert(
-        { paper_id: paperId, topic_id: topicId, content_md: content, updated_at: new Date().toISOString() },
+        { paper_id: paperId, topic_id: topicId, content_md: content, user_id, updated_at: new Date().toISOString() },
         { onConflict: "paper_id,topic_id" },
       )
       .select("*")
@@ -201,8 +218,12 @@ export async function createHighlight(input: {
   quote: string;
   comment_md: string;
 }) {
-  return throwIf(await supabase.from("highlights").insert(input).select("*").single()) as Highlight;
+  const user_id = await currentUserId();
+  return throwIf(
+    await supabase.from("highlights").insert({ ...input, user_id }).select("*").single(),
+  ) as Highlight;
 }
+
 
 export async function updateHighlight(id: string, patch: Partial<Pick<Highlight, "comment_md" | "topic_id">>) {
   return throwIf(await supabase.from("highlights").update(patch).eq("id", id).select("*").single()) as Highlight;

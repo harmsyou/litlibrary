@@ -25,6 +25,7 @@ export type Database = {
           quote: string
           rects: Json
           topic_id: string | null
+          user_id: string | null
         }
         Insert: {
           color?: string
@@ -36,6 +37,7 @@ export type Database = {
           quote?: string
           rects?: Json
           topic_id?: string | null
+          user_id?: string | null
         }
         Update: {
           color?: string
@@ -47,6 +49,7 @@ export type Database = {
           quote?: string
           rects?: Json
           topic_id?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -72,6 +75,7 @@ export type Database = {
           paper_id: string
           topic_id: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           content_md?: string
@@ -79,6 +83,7 @@ export type Database = {
           paper_id: string
           topic_id: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           content_md?: string
@@ -86,6 +91,7 @@ export type Database = {
           paper_id?: string
           topic_id?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -123,6 +129,7 @@ export type Database = {
           summary: string | null
           title: string
           updated_at: string
+          user_id: string | null
           year: number | null
         }
         Insert: {
@@ -143,6 +150,7 @@ export type Database = {
           summary?: string | null
           title: string
           updated_at?: string
+          user_id?: string | null
           year?: number | null
         }
         Update: {
@@ -163,6 +171,7 @@ export type Database = {
           summary?: string | null
           title?: string
           updated_at?: string
+          user_id?: string | null
           year?: number | null
         }
         Relationships: []
@@ -175,6 +184,7 @@ export type Database = {
           slug: string
           synthesis_md: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -183,6 +193,7 @@ export type Database = {
           slug: string
           synthesis_md?: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -191,6 +202,7 @@ export type Database = {
           slug?: string
           synthesis_md?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }

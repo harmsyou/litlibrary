@@ -9,86 +9,134 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as PapersIdRouteImport } from './routes/papers.$id'
-import { Route as TopicsSlugRouteImport } from './routes/topics.$slug'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedPapersIdRouteImport } from './routes/_authenticated/papers.$id'
+import { Route as AuthenticatedTopicsSlugRouteImport } from './routes/_authenticated/topics.$slug'
 
-const IndexRoute = IndexRouteImport.update({
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const PapersIdRoute = PapersIdRouteImport.update({
+const AuthenticatedPapersIdRoute = AuthenticatedPapersIdRouteImport.update({
   id: '/papers/$id',
   path: '/papers/$id',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const TopicsSlugRoute = TopicsSlugRouteImport.update({
+const AuthenticatedTopicsSlugRoute = AuthenticatedTopicsSlugRouteImport.update({
   id: '/topics/$slug',
   path: '/topics/$slug',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/papers/$id': typeof PapersIdRoute
-  '/topics/$slug': typeof TopicsSlugRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/auth': typeof AuthRoute
+  '/papers/$id': typeof AuthenticatedPapersIdRoute
+  '/topics/$slug': typeof AuthenticatedTopicsSlugRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/papers/$id': typeof PapersIdRoute
-  '/topics/$slug': typeof TopicsSlugRoute
+  '/auth': typeof AuthRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/papers/$id': typeof AuthenticatedPapersIdRoute
+  '/topics/$slug': typeof AuthenticatedTopicsSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/papers/$id': typeof PapersIdRoute
-  '/topics/$slug': typeof TopicsSlugRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/papers/$id': typeof AuthenticatedPapersIdRoute
+  '/_authenticated/topics/$slug': typeof AuthenticatedTopicsSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/papers/$id' | '/topics/$slug'
+  fullPaths: '/' | '/auth' | '/papers/$id' | '/topics/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/papers/$id' | '/topics/$slug'
-  id: '__root__' | '/' | '/papers/$id' | '/topics/$slug'
+  to: '/auth' | '/' | '/papers/$id' | '/topics/$slug'
+  id:
+    | '__root__'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/'
+    | '/_authenticated/papers/$id'
+    | '/_authenticated/topics/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  PapersIdRoute: typeof PapersIdRoute
-  TopicsSlugRoute: typeof TopicsSlugRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/': {
+      id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/papers/$id': {
-      id: '/papers/$id'
+    '/_authenticated/papers/$id': {
+      id: '/_authenticated/papers/$id'
       path: '/papers/$id'
       fullPath: '/papers/$id'
-      preLoaderRoute: typeof PapersIdRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedPapersIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/topics/$slug': {
-      id: '/topics/$slug'
+    '/_authenticated/topics/$slug': {
+      id: '/_authenticated/topics/$slug'
       path: '/topics/$slug'
       fullPath: '/topics/$slug'
-      preLoaderRoute: typeof TopicsSlugRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedTopicsSlugRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedPapersIdRoute: typeof AuthenticatedPapersIdRoute
+  AuthenticatedTopicsSlugRoute: typeof AuthenticatedTopicsSlugRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedPapersIdRoute: AuthenticatedPapersIdRoute,
+  AuthenticatedTopicsSlugRoute: AuthenticatedTopicsSlugRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  PapersIdRoute: PapersIdRoute,
-  TopicsSlugRoute: TopicsSlugRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
