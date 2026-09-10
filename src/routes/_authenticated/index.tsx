@@ -38,6 +38,7 @@ function Index() {
   const { data: papers } = useSuspenseQuery(papersQuery());
   const { data: links } = useSuspenseQuery(linksQuery());
   const [q, setQ] = useState("");
+  const { firstName, suggested, loading: nameLoading, save: saveFirstName } = useFirstName();
 
   const stats = useMemo(() => {
     const topicPapers = new Map<string, Set<string>>();
