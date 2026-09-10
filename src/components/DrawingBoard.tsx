@@ -43,7 +43,7 @@ export function DrawingBoard() {
   });
 
   return (
-    <section className="mt-[45vh]">
+    <section className="mt-[40vh]">
       <div className="flex items-baseline justify-between border-b border-foreground pb-2">
         <h2 className="text-sm font-semibold italic text-foreground">Drawing Board</h2>
         <span className="label-mono">{notes.length}</span>
