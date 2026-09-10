@@ -33,7 +33,7 @@ export function FirstNamePrompt({
 
   return (
     <Dialog open={open}>
-      <DialogContent className="sm:max-w-sm" showCloseButton={false}>
+      <DialogContent className="sm:max-w-sm [&>button]:hidden">
         <DialogHeader>
           <DialogTitle>What's your first name?</DialogTitle>
           <DialogDescription>It shows at the top of your reading room.</DialogDescription>
