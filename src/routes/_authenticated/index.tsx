@@ -7,7 +7,7 @@ import { UploadPaperDialog } from "@/components/UploadPaperDialog";
 import { PaperTable } from "@/components/PaperTable";
 import { linksQuery, papersQuery, topicsQuery } from "@/lib/db";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "Reading Room — Papers & Topic Notes" },
