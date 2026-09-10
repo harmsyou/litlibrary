@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { Markdown, MarkdownEditor } from "@/components/MarkdownEditor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -220,12 +221,12 @@ function TopicPage() {
                           p. {h.page}
                         </Link>
                         <div>
-                          <blockquote className="border-l-2 border-mark-strong pl-3 text-[15px] leading-relaxed">
-                            <span className="bg-mark/60 box-decoration-clone px-0.5">{h.quote}</span>
-                          </blockquote>
                           {h.comment_md.trim() && (
-                            <Markdown className="mt-2 text-muted-foreground">{h.comment_md}</Markdown>
+                            <Markdown className="text-[15px] leading-relaxed text-foreground">{h.comment_md}</Markdown>
                           )}
+                          <blockquote className={cn("border-l border-foreground/20 pl-3 text-[15px] leading-relaxed text-muted-foreground", h.comment_md.trim() && "mt-3")}>
+                            <span className="bg-mark/40 box-decoration-clone px-0.5">{h.quote}</span>
+                          </blockquote>
                         </div>
                       </li>
                     ))}
