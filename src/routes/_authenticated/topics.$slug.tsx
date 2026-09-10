@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { deleteTopic, topicBySlugQuery, updateTopic } from "@/lib/db";
 
-export const Route = createFileRoute("/topics/$slug")({
+export const Route = createFileRoute("/_authenticated/topics/$slug")({
   loader: async ({ context, params }) => {
     const data = await context.queryClient.ensureQueryData(topicBySlugQuery(params.slug));
     if (!data) throw notFound();

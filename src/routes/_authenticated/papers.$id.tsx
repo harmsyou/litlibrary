@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 
 const PdfReader = lazy(() => import("@/components/reader/PdfReader"));
 
-export const Route = createFileRoute("/papers/$id")({
+export const Route = createFileRoute("/_authenticated/papers/$id")({
   validateSearch: z.object({ h: z.string().optional() }),
   loader: async ({ context, params }) => {
     const [paper] = await Promise.all([
