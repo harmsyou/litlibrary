@@ -148,6 +148,7 @@ function Index() {
           </>
         }
       />
+      <FirstNamePrompt open={!nameLoading && !firstName} suggested={suggested} onSave={saveFirstName} />
       <main className="mx-auto w-full max-w-7xl flex-1 px-5 pb-24 pt-10">
         <h1 className="sr-only">Reading Room</h1>
         <p className="mb-8 text-[11px] uppercase tracking-[0.14em] text-muted-foreground label-mono">
