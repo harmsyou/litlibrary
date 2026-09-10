@@ -6,6 +6,7 @@ export type Topic = Tables<"topics">;
 export type Paper = Tables<"papers">;
 export type PaperTopicNote = Tables<"paper_topic_notes">;
 export type Highlight = Tables<"highlights">;
+export type ScratchNote = Tables<"scratch_notes">;
 export type HighlightRect = { x: number; y: number; w: number; h: number };
 
 export function slugify(name: string) {
@@ -231,4 +232,37 @@ export async function updateHighlight(id: string, patch: Partial<Pick<Highlight,
 
 export async function deleteHighlight(id: string) {
   throwIf(await supabase.from("highlights").delete().eq("id", id));
+}
+
+// ---------- Drawing board (notes tied to nothing) ----------
+
+export const scratchNotesQuery = () =>
+  queryOptions({
+    queryKey: ["scratch-notes"],
+    queryFn: async () =>
+      throwIf(
+        await supabase.from("scratch_notes").select("*").order("updated_at", { ascending: false }),
+      ) as ScratchNote[],
+  });
+
+export async function createScratchNote(title: string) {
+  const user_id = await currentUserId();
+  return throwIf(
+    await supabase.from("scratch_notes").insert({ title: title.trim(), user_id }).select("*").single(),
+  ) as ScratchNote;
+}
+
+export async function updateScratchNote(id: string, patch: Partial<Pick<ScratchNote, "title" | "content_md">>) {
+  return throwIf(
+    await supabase
+      .from("scratch_notes")
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select("*")
+      .single(),
+  ) as ScratchNote;
+}
+
+export async function deleteScratchNote(id: string) {
+  throwIf(await supabase.from("scratch_notes").delete().eq("id", id));
 }

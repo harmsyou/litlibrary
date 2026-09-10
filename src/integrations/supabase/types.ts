@@ -176,6 +176,33 @@ export type Database = {
         }
         Relationships: []
       }
+      scratch_notes: {
+        Row: {
+          content_md: string
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content_md?: string
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content_md?: string
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       topics: {
         Row: {
           created_at: string

@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { NewTopicDialog } from "@/components/NewTopicDialog";
 import { UploadPaperDialog } from "@/components/UploadPaperDialog";
 import { PaperTable } from "@/components/PaperTable";
+import { DrawingBoard } from "@/components/DrawingBoard";
 import { FirstNamePrompt } from "@/components/FirstNamePrompt";
 import { useFirstName } from "@/hooks/useFirstName";
 import { linksQuery, papersQuery, topicsQuery } from "@/lib/db";
@@ -238,6 +239,7 @@ function Index() {
                 ))}
               </ul>
             )}
+            <DrawingBoard />
           </section>
 
           {/* Papers */}

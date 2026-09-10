@@ -29,6 +29,13 @@
       "when": 1789065528878,
       "tag": "0003_per_user_ownership",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789067442079,
+      "tag": "0004_create_scratch_notes",
+      "breakpoints": true
     }
   ]
 }
